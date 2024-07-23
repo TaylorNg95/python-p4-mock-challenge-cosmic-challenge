@@ -26,8 +26,11 @@ class Planet(db.Model, SerializerMixin):
     nearest_star = db.Column(db.String)
 
     # Add relationship
+    missions = db.relationship('Mission', back_populates='planet', cascade='all, delete-orphan')
+    scientists = association_proxy('Mission', 'scientist', creator=lambda scientist_obj: Mission(scientist=scientist_obj))
 
     # Add serialization rules
+    serialize_rules = ('-missions.planet',)
 
 
 class Scientist(db.Model, SerializerMixin):
@@ -38,23 +41,64 @@ class Scientist(db.Model, SerializerMixin):
     field_of_study = db.Column(db.String)
 
     # Add relationship
+    missions = db.relationship('Mission', back_populates='scientist', cascade='all, delete-orphan')
+    planets = association_proxy('Mission', 'planet', creator=lambda planet_obj: Mission(planet=planet_obj))
 
     # Add serialization rules
+    serialize_rules = ('-missions.scientist',)
 
     # Add validation
-
+    @validates('name')
+    def validate_name(self, key, name):
+        if not name or name == '':
+            raise ValueError('name cannot be blank')
+        else:
+            return name
+        
+    @validates('field_of_study')
+    def validate_field(self, key, field):
+        if not field or field == '':
+            raise ValueError('field cannot be blank')
+        else:
+            return field
 
 class Mission(db.Model, SerializerMixin):
     __tablename__ = 'missions'
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
+    scientist_id = db.Column(db.Integer, db.ForeignKey('scientists.id'))
+    planet_id = db.Column(db.Integer, db.ForeignKey('planets.id'))
 
     # Add relationships
+    planet = db.relationship('Planet', back_populates='missions')
+    scientist = db.relationship('Scientist', back_populates='missions')
 
     # Add serialization rules
+    serialize_rules = ('-scientist.missions',)
+    serialize_rules = ('-planet.missions',)
 
     # Add validation
+    @validates('name')
+    def validate_name(self, key, name):
+        if not name or name == '':
+            raise ValueError('name cannot be blank')
+        else:
+            return name
+        
+    @validates('scientist_id')
+    def validate_scientist_id(self, key, scientist_id):
+        if not scientist_id or scientist_id == '':
+            raise ValueError('scientist id cannot be blank')
+        else:
+            return scientist_id
+    
+    @validates('planet_id')
+    def validate_planet_id(self, key, planet_id):
+        if not planet_id or planet_id == '':
+            raise ValueError('planet id cannot be blank')
+        else:
+            return planet_id    
 
 
 # add any models you may need.
